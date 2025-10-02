@@ -46,7 +46,7 @@ export default function Chat() {
         formData.append('image', imageFile);
       }
 
-      const N8N_WEBHOOK_URL = import.meta.env.WEBHOOK_PROD_URL;
+      const N8N_WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL as string;
 
       const response = await fetch(N8N_WEBHOOK_URL, {
       method: "POST",
