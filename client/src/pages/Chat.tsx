@@ -46,10 +46,12 @@ export default function Chat() {
         formData.append('image', imageFile);
       }
 
-      const response = await fetch('/api/chat', {
-        method: 'POST',
-        body: formData,
-      });
+      const N8N_WEBHOOK_URL = import.meta.env.WEBHOOK_PROD_URL;
+
+      const response = await fetch(N8N_WEBHOOK_URL, {
+      method: "POST",
+      body: formData,
+    });
 
       if (!response.ok) {
         throw new Error('Failed to send message');
