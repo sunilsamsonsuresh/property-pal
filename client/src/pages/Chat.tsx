@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { v4 as uuidv4 } from 'uuid';
+import { useState } from "react";
+import { v4 as uuidv4 } from "uuid";
 import ChatHeader from "@/components/ChatHeader";
 import MessagesContainer from "@/components/MessagesContainer";
 import ChatInput from "@/components/ChatInput";
@@ -13,8 +13,8 @@ export default function Chat() {
   const handleSendMessage = async (text: string, imageFile?: File) => {
     const userMessage: Message = {
       id: uuidv4(),
-      role: 'user',
-      content: text || '',
+      role: "user",
+      content: text || "",
       timestamp: Date.now(),
     };
 
@@ -22,13 +22,14 @@ export default function Chat() {
       const reader = new FileReader();
       reader.onloadend = () => {
         userMessage.imageUrl = reader.result as string;
-        setMessages(prev => [...prev, userMessage]);
+        setMessages((prev) => [...prev, userMessage]);
       };
       reader.readAsDataURL(imageFile);
     } else {
-      setMessages(prev => [...prev, userMessage]);
+      setMessages((prev) => [...prev, userMessage]);
     }
-    await sendToWebhook(text || '', imageFile);
+
+    await sendToWebhook(text || "", imageFile);
   };
 
   const sendToWebhook = async (text: string, imageFile?: File) => {
@@ -46,6 +47,7 @@ export default function Chat() {
         formData.append("image", imageFile);
       }
 
+      // ✅ Webhook URL comes from Vercel env var (must start with VITE_)
       const N8N_WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL as string;
 
       const response = await fetch(N8N_WEBHOOK_URL, {
@@ -54,19 +56,27 @@ export default function Chat() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to send message");
+        throw new Error(`Failed to send message: ${response.statusText}`);
       }
 
       const data = await response.json();
 
-      // 🔑 Safely extract the actual response text
+      // ✅ Safely extract meaningful reply from n8n
       let reply: string;
       if (typeof data.response === "string") {
         reply = data.response;
       } else if (data.response && typeof data.response === "object") {
         reply = JSON.stringify(data.response);
       } else if (data.answer) {
-        reply = typeof data.answer === "string" ? data.answer : JSON.stringify(data.answer);
+        reply =
+          typeof data.answer === "string"
+            ? data.answer
+            : JSON.stringify(data.answer);
+      } else if (data.output) {
+        reply =
+          typeof data.output === "string"
+            ? data.output
+            : JSON.stringify(data.output);
       } else {
         reply = JSON.stringify(data);
       }
@@ -86,7 +96,7 @@ export default function Chat() {
         id: uuidv4(),
         role: "assistant",
         content:
-          "Sorry, there was an error processing your message. Please try again.",
+          "⚠️ Sorry, there was an error processing your message. Please try again.",
         timestamp: Date.now(),
       };
 
