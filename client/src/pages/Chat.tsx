@@ -36,48 +36,61 @@ export default function Chat() {
 
     try {
       const formData = new FormData();
-      formData.append('sessionId', sessionId);
-      
+      formData.append("sessionId", sessionId);
+
       if (text.trim()) {
-        formData.append('text', text.trim());
+        formData.append("text", text.trim());
       }
-      
+
       if (imageFile) {
-        formData.append('image', imageFile);
+        formData.append("image", imageFile);
       }
 
       const N8N_WEBHOOK_URL = import.meta.env.VITE_N8N_WEBHOOK_URL as string;
 
       const response = await fetch(N8N_WEBHOOK_URL, {
-      method: "POST",
-      body: formData,
-    });
+        method: "POST",
+        body: formData,
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to send message');
+        throw new Error("Failed to send message");
       }
 
       const data = await response.json();
-      
+
+      // 🔑 Safely extract the actual response text
+      let reply: string;
+      if (typeof data.response === "string") {
+        reply = data.response;
+      } else if (data.response && typeof data.response === "object") {
+        reply = JSON.stringify(data.response);
+      } else if (data.answer) {
+        reply = typeof data.answer === "string" ? data.answer : JSON.stringify(data.answer);
+      } else {
+        reply = JSON.stringify(data);
+      }
+
       const assistantMessage: Message = {
         id: uuidv4(),
-        role: 'assistant',
-        content: data.response || 'Response received',
+        role: "assistant",
+        content: reply,
         timestamp: Date.now(),
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
-      console.error('Error sending message:', error);
-      
+      console.error("Error sending message:", error);
+
       const errorMessage: Message = {
         id: uuidv4(),
-        role: 'assistant',
-        content: 'Sorry, there was an error processing your message. Please try again.',
+        role: "assistant",
+        content:
+          "Sorry, there was an error processing your message. Please try again.",
         timestamp: Date.now(),
       };
-      
-      setMessages(prev => [...prev, errorMessage]);
+
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsTyping(false);
     }
